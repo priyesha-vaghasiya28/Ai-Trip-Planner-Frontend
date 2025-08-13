@@ -13,7 +13,7 @@ const Login = ({ setIsAuthenticated }) => {
       const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
       setIsAuthenticated(true);
-      navigate('/dashboard/my-trips');
+      navigate('/dashboard'); // ✅ Go to Dashboard instead of MyTrips
     } catch (err) {
       alert('Login failed: ' + (err.response?.data?.message || err.message));
     }

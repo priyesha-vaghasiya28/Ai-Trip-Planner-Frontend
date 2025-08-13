@@ -1,0 +1,298 @@
+/* General Layout */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: radial-gradient(circle at top left, #e0f7fa, #c5cae9);
+  transition: background 0.5s ease;
+}
+
+.trips-container {
+  display: flex;
+  width: 90%;
+  max-width: 1200px;
+  height: 80vh;
+  max-height: 800px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.sidebar {
+  flex: 1;
+  padding: 2.5rem;
+  overflow-y: auto;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px 0 0 16px;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar:hover {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+.map-container {
+  flex: 2;
+  position: relative;
+  background-color: #e9ecef;
+}
+
+/* Headings and Titles */
+.section-title {
+  font-size: 1.8rem;
+  color: #1a237e;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-weight: 700;
+  border-bottom: 2px solid #e0f7fa;
+  padding-bottom: 10px;
+}
+
+/* Geocoder Inputs */
+.search-inputs {
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+/* These styles target the Mapbox Geocoder component */
+.mapboxgl-ctrl-geocoder {
+  width: 100%;
+  font-family: inherit;
+  font-size: 1rem;
+  color: #495057;
+  margin-bottom: 1rem;
+}
+
+.mapboxgl-ctrl-geocoder--input {
+  border: 1px solid #ced4da;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem 0.85rem 3rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.mapboxgl-ctrl-geocoder--input::placeholder {
+  color: #999;
+}
+
+.mapboxgl-ctrl-geocoder--input:focus {
+  outline: none;
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 4px rgba(79, 195, 247, 0.3);
+}
+
+/* Custom icon styling */
+.mapboxgl-ctrl-geocoder--icon {
+  display: none;
+}
+
+.mapboxgl-ctrl-geocoder.mapboxgl-ctrl-geocoder--pin-right {
+  position: relative;
+}
+
+#source .mapboxgl-ctrl-geocoder--pin-right::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234285F4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>');
+  background-size: contain;
+  background-repeat: no-repeat;
+  z-index: 10;
+}
+
+#destination .mapboxgl-ctrl-geocoder--pin-right::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23DB4437"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>');
+  background-size: contain;
+  background-repeat: no-repeat;
+  z-index: 10;
+}
+
+/* Transport Buttons */
+.transport-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+}
+
+.transport-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 10px;
+  border: none;
+  border-radius: 14px;
+  background-color: #e3f2fd;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a237e;
+  width: 90px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transport-button:hover {
+  background-color: #bbdefb;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.transport-button.active {
+  background-color: #0d47a1;
+  color: #fff;
+  border: 2px solid #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(13, 71, 161, 0.4);
+}
+
+.transport-button.active svg {
+  color: #fff;
+}
+
+.transport-button svg {
+  font-size: 1.6rem;
+  color: #42a5f5;
+  transition: color 0.3s ease;
+}
+
+/* Information Cards */
+.info-card {
+  padding: 2.5rem;
+  background-color: rgba(240, 248, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2.5rem;
+  border-left: 6px solid #0d47a1;
+  transition: transform 0.3s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-5px);
+}
+
+.info-card h4 {
+  margin-top: 0;
+  color: #0d47a1;
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.info-item svg {
+  color: #42a5f5;
+  font-size: 1.2rem;
+}
+
+.directions-list ol {
+  padding-left: 25px;
+  margin: 0;
+  list-style-position: inside;
+}
+
+.directions-list li {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* Loading and Error States */
+.loading-spinner {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.2rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.error-message {
+  padding: 1.5rem;
+  background-color: #ffcdd2;
+  color: #b71c1c;
+  border-radius: 10px;
+  border: 1px solid #e57373;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 2.5rem;
+  font-size: 1rem;
+}
+
+/* Flight Link */
+.flight-link {
+  display: inline-block;
+  padding: 14px 24px;
+  background-color: #0d47a1;
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  margin-top: 20px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.flight-link:hover {
+  background-color: #09397e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .trips-container {
+    width: 95%;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    margin: 20px 0;
+  }
+  .sidebar {
+    height: 50vh;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 16px 16px 0 0;
+  }
+  .map-container {
+    height: 50vh;
+    width: 100%;
+  }
+}

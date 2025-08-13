@@ -11,7 +11,7 @@ const Features = () => {
       <div className="row g-4">
         <div className="col-md-6">
           <div className="card shadow-sm h-100 border-0">
-            <img src="/images/features 1.jpg" className="card-img-top" alt="AI Planning" />
+            <img src="/images/image 1.jpg" className="card-img-top" alt="AI Planning" />
             <div className="card-body">
               <h5 className="card-title text-primary fw-bold">AI-Powered Itineraries</h5>
               <p className="card-text text-secondary">

@@ -1,105 +1,290 @@
-import React, { useState } from 'react';
-import TripForm from './TripForm';
-import TripList from './TripList';
-import TripPlanner from './TripPlanner';
-import TripExperiences from './TripExperiences';
+import React, { useEffect, useRef, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
+import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
+import "mapbox-gl/dist/mapbox-gl.css";
+// eslint-disable-next-line
+import { FaCar, FaTrain, FaBus, FaPlane, FaMapMarkerAlt, FaClock, FaDirections, FaInfoCircle, FaMap, FaSearchLocation, FaMapPin } from 'react-icons/fa';
 import './MyTrips.css';
 
 const MyTrips = () => {
-  const [showTripForm, setShowTripForm] = useState(false);
-  const [showTripPlanner, setShowTripPlanner] = useState(false);
-  const [showExperiences, setShowExperiences] = useState(false);
+  const mapRef = useRef(null);
+  const sourceGeocoderRef = useRef(null);
+  const destinationGeocoderRef = useRef(null);
+  const [source, setSource] = useState(null);
+  const [destination, setDestination] = useState(null);
+  const [destinationCountry, setDestinationCountry] = useState(null);
+  const [distance, setDistance] = useState(null);
+  const [duration, setDuration] = useState(null);
+  const [directions, setDirections] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedTransport, setSelectedTransport] = useState("car");
 
-  const handleCreateTripClick = () => {
-    setShowTripForm(true);
-    setShowTripPlanner(false);
-    setShowExperiences(false);
+  const MAPBOX_TOKEN = "pk.eyJ1IjoicHJpeWVzaGEiLCJhIjoiY21lMHhkeWthMDdqcTJqcXprYzEwZzJleSJ9.CqcsyvT4eJVv9Heo6rvCmA";
+
+  useEffect(() => {
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    
+    if (mapRef.current && mapRef.current.getMap) {
+      return; 
+    }
+
+    const initMap = new mapboxgl.Map({
+      container: mapRef.current,
+      style: "mapbox://styles/mapbox/streets-v11",
+      center: [78.9629, 20.5937],
+      zoom: 4,
+    });
+
+    initMap.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    const sourceGeocoder = new MapboxGeocoder({
+      accessToken: MAPBOX_TOKEN,
+      placeholder: "Enter starting point",
+      mapboxgl: mapboxgl,
+      marker: false,
+      countries: 'in,us,gb,de,fr,ca,au',
+    });
+
+    const destinationGeocoder = new MapboxGeocoder({
+      accessToken: MAPBOX_TOKEN,
+      placeholder: "Enter destination",
+      mapboxgl: mapboxgl,
+      marker: false,
+      countries: 'in,us,gb,de,fr,ca,au',
+    });
+
+    if (sourceGeocoderRef.current && destinationGeocoderRef.current) {
+      sourceGeocoderRef.current.innerHTML = '';
+      sourceGeocoderRef.current.appendChild(sourceGeocoder.onAdd(initMap));
+      destinationGeocoderRef.current.innerHTML = '';
+      destinationGeocoderRef.current.appendChild(destinationGeocoder.onAdd(initMap));
+    }
+
+    sourceGeocoder.on("result", (e) => {
+      setSource(e.result.geometry.coordinates);
+      setError(null);
+    });
+
+    destinationGeocoder.on("result", (e) => {
+      setDestination(e.result.geometry.coordinates);
+      const countryContext = e.result.context ? e.result.context.find(c => c.id.startsWith('country')) : null;
+      setDestinationCountry(countryContext ? countryContext.short_code.toUpperCase() : null);
+      setError(null);
+    });
+
+    mapRef.current = initMap;
+
+    return () => {
+        if (initMap) {
+            initMap.remove();
+        }
+    };
+  }, [mapRef, sourceGeocoderRef, destinationGeocoderRef]);
+
+  useEffect(() => {
+    if (source && destination && mapRef.current && selectedTransport === "car") {
+      if (destinationCountry === "IN") {
+        getRoute(source, destination, mapRef.current);
+      } else {
+        setError("Car routing is only available for domestic trips in India.");
+        if (mapRef.current.getLayer("route")) {
+          mapRef.current.removeLayer("route");
+          mapRef.current.removeSource("route");
+        }
+        setDirections([]);
+        setDistance(null);
+        setDuration(null);
+      }
+    }
+  }, [source, destination, destinationCountry, selectedTransport, mapRef]);
+  
+  useEffect(() => {
+    if (destination && mapRef.current && selectedTransport === 'car') {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          const newLocation = [longitude, latitude];
+          getRoute(newLocation, destination, mapRef.current);
+        },
+        (err) => {
+          console.error("Error getting live location:", err);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [destination, selectedTransport, mapRef]);
+
+  const getRoute = async (startCoords, endCoords, map) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${startCoords[0]},${startCoords[1]};${endCoords[0]},${endCoords[1]}?geometries=geojson&steps=true&access_token=${MAPBOX_TOKEN}`
+      );
+      const data = await response.json();
+      
+      if (!data.routes || data.routes.length === 0) {
+        throw new Error("No routes found for the selected locations.");
+      }
+      
+      const route = data.routes[0].geometry;
+      const distanceMeters = data.routes[0].distance;
+      const durationSeconds = data.routes[0].duration;
+
+      setDistance((distanceMeters / 1000).toFixed(2));
+      setDuration((durationSeconds / 60).toFixed(0));
+
+      const routeSteps = data.routes[0].legs[0].steps;
+      setDirections(routeSteps.map((step) => step.maneuver.instruction));
+
+      if (map.getSource("route")) {
+        map.getSource("route").setData({
+          type: "Feature",
+          properties: {},
+          geometry: route,
+        });
+      } else {
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: route,
+          },
+        });
+        map.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#007bff",
+            "line-width": 5,
+            "line-opacity": 0.75,
+          },
+        });
+      }
+      
+      const bounds = new mapboxgl.LngLatBounds();
+      route.coordinates.forEach((coord) => {
+        bounds.extend(coord);
+      });
+      map.fitBounds(bounds, { padding: 50 });
+
+    } catch (err) {
+      console.error("Error fetching route:", err);
+      setError(err.message);
+      setDistance(null);
+      setDuration(null);
+      setDirections([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePlanTripClick = () => {
-    setShowTripForm(false);
-    setShowTripPlanner(true);
-    setShowExperiences(false);
-  };
+  const isDomestic = destinationCountry === 'IN';
 
-  const handleExperiencesClick = () => {
-    setShowTripForm(false);
-    setShowTripPlanner(false);
-    setShowExperiences(true);
-  };
-
-  const handleBackClick = () => {
-    setShowTripForm(false);
-    setShowTripPlanner(false);
-    setShowExperiences(false);
-  };
-
-  if (showTripForm || showTripPlanner || showExperiences) {
-    return (
-      <div className="container my-5">
-        <button
-          onClick={handleBackClick}
-          className="btn btn-link text-decoration-none mb-3"
-        >
-          ← Back to My Trips
-        </button>
-        {showTripForm && <TripForm />}
-        {showTripPlanner && <TripPlanner />}
-        {showExperiences && <TripExperiences />}
-      </div>
-    );
-  }
+  const TransportButton = ({ icon, label, transportType }) => (
+    <button
+      onClick={() => setSelectedTransport(transportType)}
+      className={`transport-button ${selectedTransport === transportType ? 'active' : ''}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
 
   return (
-    <div className="container my-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="text-primary fw-bold mb-0">My Trips</h2>
-        <button
-          className="btn btn-success rounded-pill px-4"
-          onClick={handleCreateTripClick}
-        >
-          <i className="bi bi-plus-lg me-2"></i>Create New Trip
-        </button>
+    <div className="trips-container">
+      <div className="sidebar">
+        <h2 className="section-title"><FaMap /> Plan Your Trip</h2>
+        <div className="search-inputs">
+          <div ref={sourceGeocoderRef} id="source" className="geocoder-input-wrapper"></div>
+          <div ref={destinationGeocoderRef} id="destination" className="geocoder-input-wrapper"></div>
+        </div>
+
+        {destination && (
+          <>
+            <h4 className="section-title" style={{ marginTop: '2rem' }}>Select Transport Mode</h4>
+            <div className="transport-options">
+              {isDomestic ? (
+                <>
+                  <TransportButton icon={<FaCar />} label="Car" transportType="car" />
+                  <TransportButton icon={<FaTrain />} label="Train" transportType="train" />
+                  <TransportButton icon={<FaBus />} label="Bus" transportType="bus" />
+                  <TransportButton icon={<FaPlane />} label="Flight" transportType="flight" />
+                </>
+              ) : (
+                <TransportButton icon={<FaPlane />} label="Flight" transportType="flight" />
+              )}
+            </div>
+          </>
+        )}
+
+        {loading && <div className="loading-spinner"><p>Loading...</p></div>}
+        {error && <div className="error-message"><FaInfoCircle />{error}</div>}
+
+        {isDomestic && selectedTransport === "car" && distance && duration && (
+          <div className="info-card">
+            <h4><FaCar /> Trip Details (Car)</h4>
+            <div className="info-item">
+              <FaMapMarkerAlt />
+              <strong>Distance:</strong> <span>{distance} km</span>
+            </div>
+            <div className="info-item">
+              <FaClock />
+              <strong>Est. Time:</strong> <span>{duration} minutes</span>
+            </div>
+          </div>
+        )}
+
+        {isDomestic && selectedTransport === "train" && (
+          <div className="info-card">
+            <h4><FaTrain /> Train Details</h4>
+            <p>Train directions and schedules would be shown here. (Integration with a train API required)</p>
+          </div>
+        )}
+
+        {isDomestic && selectedTransport === "bus" && (
+          <div className="info-card">
+            <h4><FaBus /> Bus Details</h4>
+            <p>Bus routes and schedules would be shown here. (Integration with a bus API required)</p>
+          </div>
+        )}
+
+        {((isDomestic && selectedTransport === "flight") || !isDomestic) && (
+          <div className="info-card">
+            <h4><FaPlane /> Flight Details</h4>
+            <p className="info-item">Click the link below to search for flights:</p>
+            <a
+              href="https://www.google.com/flights"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flight-link"
+            >
+              Search Flights
+            </a>
+          </div>
+        )}
+
+        {isDomestic && selectedTransport === "car" && directions.length > 0 && (
+          <div className="info-card directions-list">
+            <h4><FaDirections /> Directions</h4>
+            <ol>
+              {directions.map((instruction, index) => (
+                <li key={index}>{instruction}</li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
-
-      <p className="lead text-muted mb-5">
-        Here you can view and manage your saved trips.
-      </p>
-
-      <section className="mb-5">
-        <TripList />
-      </section>
-
-      <hr className="my-5" />
-
-      <section className="row g-4">
-        <div className="col-md-6">
-          <div className="card h-100 shadow-sm p-4 text-center">
-            <i className="bi bi-robot display-4 text-primary mb-3"></i>
-            <h4 className="card-title">Generate with AI</h4>
-            <p className="card-text text-muted">Let our AI chatbot create a personalized itinerary for you.</p>
-            <button
-              className="btn btn-primary rounded-pill mt-auto"
-              onClick={handlePlanTripClick}
-            >
-              Generate AI Plan
-            </button>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="card h-100 shadow-sm p-4 text-center">
-            <i className="bi bi-camera display-4 text-success mb-3"></i>
-            <h4 className="card-title">Share Experiences</h4>
-            <p className="card-text text-muted">Document your journey with photos, videos, and daily logs.</p>
-            <button
-              className="btn btn-outline-success rounded-pill mt-auto"
-              onClick={handleExperiencesClick}
-            >
-              Share My Experience
-            </button>
-          </div>
-        </div>
-      </section>
+      <div id="map" ref={mapRef} className="map-container"></div>
     </div>
   );
 };
